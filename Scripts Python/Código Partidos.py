@@ -50,11 +50,17 @@ COLS_EXCLUIR = {"Attendance", "Venue", "Match Report", "Notes"}
 with open(HTML_PATH, "r", encoding="utf-8") as f:
     soup = BeautifulSoup(f, "html.parser")
 
+# La tabla de resultados es la décima tabla del HTML (índice 9).
+# Las otras tablas de la misma página contienen información de navegación
+# y clasificaciones que no interesan.
 table = soup.find_all("table")[9]
+# La cabecera usa <th> dentro de <thead>; los datos usan <td> dentro de <tbody>
 headers = [th.get_text(strip=True) for th in table.find("thead").find_all("th")]
 
 rows = []
 for tr in table.find("tbody").find_all("tr"):
+    # Algunas filas solo tienen <th> (separadores de jornada); se recogen igual
+    # y se filtrarán después por si la columna "Wk" no es numérica.
     cells = [td.get_text(strip=True) for td in tr.find_all(["td", "th"])]
     if cells:
         rows.append(cells)
