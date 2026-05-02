@@ -104,7 +104,7 @@ streamlit run app.py
 | Fuente | Datos |
 |---|---|
 | WhoScored | Métricas tácticas de equipo y jugador (85 variables) |
-| FBref | xG, porteros, partidos, árbitros |
+| FBref | Métricas tácticas de equipo y jugador |
 | estadisticaslaliga.es | Clasificación y estadísticas de árbitros |
 | FutbolFantasy | Lesionados y sancionados |
 | Open-Meteo | Datos climatológicos por ciudad |
