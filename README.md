@@ -1,23 +1,47 @@
-# TFG — Algoritmo Prescriptivo LaLiga 2025-26
+# Analítica Prescriptiva en Fútbol: Sistema Predictivo Táctico con ML y Big Data
+**Autor:** Ignacio Landaluce Gortázar · 4BA1 · Universidad Francisco de Vitoria  
+**App desplegada:** [futbolytics.streamlit.app](https://futbolytics.streamlit.app)
 
-Trabajo de Fin de Grado · Ingeniería del Dato · Universidad Francisco de Vitoria
+---
 
-Aplicación de análisis y recomendación táctica para cuerpos técnicos de fútbol profesional. A partir de variables de un partido (rival, árbitro, condiciones del encuentro), el sistema genera recomendaciones de alineación, formación y estrategia calibradas por un Índice de Éxito (IS).
+## Descripción
 
-Nota: Todos los datos del conjunto de test están actualizados tras la jornada 29.
+Herramienta de análisis prescriptivo para LaLiga que genera informes tácticos personalizados integrando más de 100 variables estadísticas en tiempo real. Incluye modelos predictivos de resultado (Regresión Lineal, Random Forest y XGBoost), un índice de éxito propio validado con R²=0.924 sobre puntos reales, y una aplicación Streamlit lista para el cuerpo técnico.
+
 ---
 
 ## Estructura del repositorio
 
 ```
-├── Base de datos.xlsx          # Base de datos principal (20 hojas, temporada 25-26)
-├── modelos.py                  # Entrenamiento de modelos predictivos (Δgoles)
-├── evaluacion.py               # Visualización y evaluación comparativa de modelos
+TFG/
+│
+├── app.py                      # Aplicación Streamlit — interfaz prescriptiva para el cuerpo técnico
+├── modelos.py                  # Entrenamiento de modelos predictivos (Δgoles, K-Fold 5)
+├── evaluacion.py               # Evaluación comparativa y gráficos E1–E6
+├── demo_video.py               # Montaje del vídeo demo (capturas + voz + subtítulos)
+├── requirements.txt            # Dependencias para despliegue en Streamlit Cloud
+├── Base de datos.xlsx          # Base de datos principal (temporada 25-26)
+│
+├── modelos/
+│   ├── modelo_b_rf.pkl         # Random Forest entrenado — modelo de producción
+│   └── feature_names.pkl       # Orden exacto de los 111 features del modelo
+│
+├── Tablas Excel/               # Salida de scrapers — temporada 25-26
+│   ├── Datos WhoScored.xlsx
+│   ├── Datos FBref.xlsx
+│   ├── Datos Árbitros.xlsx
+│   ├── Datos Lluvias.xlsx
+│   ├── Jugadores Unificados.xlsx
+│   ├── Jugadores FBref.xlsx
+│   ├── Duplas Peligrosas.xlsx
+│   ├── Lesiones y Sanciones.xlsx
+│   └── Partidos.xlsx
+│
+├── Tablas Excel 24-25/         # Salida de scrapers — temporada 24-25 (datos históricos)
 │
 ├── Scripts Python/             # Scrapers y análisis — temporada 25-26
-│   ├── app.py                  # Aplicación principal (interfaz para el cuerpo técnico)
-│   ├── eda.py                  # Análisis exploratorio — genera gráficos G1-G16
-│   ├── Actualización.py        # Orquestador: actualiza todos los datos
+│   ├── eda.py                  # Análisis exploratorio — genera gráficos G1–G17
+│   ├── Actualización.py        # Orquestador: lanza todos los scrapers secuencialmente
 │   ├── Otras Fuentes/
 │   │   ├── Código Árbitros.py
 │   │   ├── Código Duplas Peligrosas.py
@@ -27,7 +51,7 @@ Nota: Todos los datos del conjunto de test están actualizados tras la jornada 2
 │   │   ├── Código Lluvias.py
 │   │   └── Código Partidos.py
 │   └── WhoScored/
-│       ├── who.py              # Orquestador WhoScored
+│       ├── who.py
 │       ├── general.py
 │       ├── detallado.py
 │       ├── posicionales.py
@@ -35,45 +59,53 @@ Nota: Todos los datos del conjunto de test están actualizados tras la jornada 2
 │       ├── jugadores.py
 │       └── jugadores2.py
 │
-├── Scripts Python 24-25/       # Scrapers equivalentes — temporada 24-25 (datos históricos)
-│
-├── Tablas Excel/               # Salida de scrapers — temporada 25-26
-└── Tablas Excel 24-25/         # Salida de scrapers — temporada 24-25
+└── Scripts Python 24-25/       # Scrapers equivalentes — temporada 24-25
 ```
 
 ---
 
 ## Modelos predictivos
 
-Ambos modelos predicen **Δgoles = goles_local − goles_visitante** sobre el mismo conjunto de features, lo que permite una comparación directa.
+**Dataset:** 670 partidos (temporadas 24-25 y 25-26). Target: diferencia de goles local−visitante.  
+**111 variables** (diferencias local−visitante): 85 WhoScored + 5 clasificación + 10 portero + 6 jugadores + 3 forma reciente + 2 contextuales.
 
-| | Modelo A | Modelo B |
-|---|---|---|
-| Algoritmo | Regresión Lineal Múltiple | Random Forest Regressor |
-| Train | Temporada 24-25 (380 partidos) | Temporada 24-25 (380 partidos) |
-| Test | Temporada 25-26 (290 partidos) | Temporada 25-26 (290 partidos) |
-| Features | 57 diferenciales local−visitante | 57 diferenciales local−visitante |
+| Modelo | MAE | RMSE | R² |
+|---|---|---|---|
+| A — Regresión Lineal | 1.1351 | 1.4644 | 0.2087 |
+| **B — Random Forest** | **1.0969** | **1.4188** | **0.2573** |
+| C — XGBoost | 1.1570 | 1.4857 | 0.1855 |
+
+Accuracy clasificación (Modelo B): **49.6%** (baseline azar: 36.3%). AUC macro: 0.694.
+
+---
+
+## Índice de Éxito (IS)
+
+```
+IS_equipo   = 0.35·minmax(xG/PJ) + 0.35·minmax(−GC/PJ) + 0.30·minmax(Rating)
+IS_jugador  = 0.35·norm(OfScore90) + 0.35·norm(DefScore90) + 0.30·norm(Rating)
+```
+
+Validación: r=0.87 con Pts (p<0.001), R²=0.924.
+
+---
+
+## Ejecutar en local
 
 ```bash
-python3 modelos.py      # entrena y guarda modelos en modelos/
-python3 evaluacion.py   # genera gráficos E1-E4 en Gráficos/
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
 ---
 
-## Requisitos
+## Fuentes de datos
 
-```bash
-pip install pandas openpyxl requests beautifulsoup4 selenium scikit-learn matplotlib numpy
-```
-
-Selenium requiere [ChromeDriver](https://chromedriver.chromium.org/) compatible con la versión de Chrome instalada.
-
----
-
-## Flujo de actualización
-
-1. Ejecutar `Actualización.py` para lanzar todos los scrapers secuencialmente.
-2. Los datos se guardan en `Tablas Excel/` y se consolidan en `Base de datos.xlsx`.
-3. Ejecutar `eda.py` para regenerar los gráficos de análisis.
-4. Ejecutar `modelos.py` + `evaluacion.py` para actualizar los modelos y sus visualizaciones.
+| Fuente | Datos |
+|---|---|
+| WhoScored | Métricas tácticas de equipo y jugador (85 variables) |
+| FBref | xG, porteros, partidos, árbitros |
+| estadisticaslaliga.es | Clasificación y estadísticas de árbitros |
+| FutbolFantasy | Lesionados y sancionados |
+| Open-Meteo | Datos climatológicos por ciudad |
+| TransferMarkt | Asignaciones de árbitros |
